@@ -12,8 +12,11 @@ import {Server} from "socket.io"
 import {createClient} from "redis";
 import {createAdapter} from "@socket.io/redis-adapter";
 import applicationRoutes from './routes';
+import {CustomError, IErrorResponse} from "@global/helpers/error-handler";
+import Logger from 'bunyan';
 
 const SERVER_PORT = 8000;
+const log: Logger = config.createLogger('setupServer');
 export class PulseServer{
     private app: Application;
 
@@ -60,15 +63,27 @@ export class PulseServer{
         applicationRoutes(app);
     }
 
-    private globalErrorHandler(app: Application): void {}
+    private globalErrorHandler(app: Application): void {
+        app.all("*", (req: Request, res: Response) => {
+            res.status(HTTP_STATUS.NOT_FOUND).json({message: `${req.originalUrl} not found`})
+        })
+
+        app.use((error: IErrorResponse, _req: Request, res: Response, next: NextFunction) => {
+            log.error(error);
+            if(error instanceof CustomError){
+                return res.status(error.statusCode).json(error.serializeErrors());
+            }
+            next();
+        })
+    }
     private async startServer(app: Application): Promise<void> {
         try {
             const httpServer: http.Server = new http.Server(app);
             const socketIO: Server = await this.createSocketIO(httpServer);
             this.startHttpServer(httpServer);
             this.socketIOConnections(socketIO);
-        } catch (e) {
-            console.log(e)
+        } catch (error) {
+            log.error(error)
         }
     }
     private async createSocketIO(httpServer: http.Server): Promise<Server> {
@@ -87,7 +102,7 @@ export class PulseServer{
     }
     private startHttpServer(httpServer: http.Server): void {
         httpServer.listen(SERVER_PORT, () => {
-            console.log(`SERVER RUNNING ON PORT ${SERVER_PORT}`)
+            log.info(`SERVER RUNNING ON PORT ${SERVER_PORT}`)
         })
     }
 

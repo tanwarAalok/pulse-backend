@@ -1,13 +1,15 @@
 import mongoose from "mongoose";
 import * as process from "process";
 import {config} from './config';
+import Logger from 'bunyan';
 
+const log: Logger = config.createLogger('setupDB');
 export default () => {
     const connect = () => {
         mongoose.connect(config.DB_URL!).then(() => {
-            console.log("DB connected");
+            log.info("DB connected");
         }).catch((error) => {
-            console.log('Error connecting with the DB', error);
+            log.error('Error connecting with the DB', error);
             return process.exit(1);
         })
     }
