@@ -7,6 +7,11 @@ import compression from "compression"
 import cookieSession from "cookie-session";
 import HTTP_STATUS from "http-status-codes";
 import "express-async-errors";
+import {config} from './config';
+import {Server} from "socket.io"
+import {createClient} from "redis";
+import {createAdapter} from "@socket.io/redis-adapter";
+import applicationRoutes from './routes';
 
 const SERVER_PORT = 8000;
 export class PulseServer{
@@ -28,16 +33,16 @@ export class PulseServer{
         app.use(
             cookieSession({
                 name: 'session',
-                keys: ['test1', 'test2'],
+                keys: [config.SECRET_KEY_ONE!, config.SECRET_KEY_TWO!],
                 maxAge: 24 * 7 * 3600 * 1000,
-                secure: false
+                secure: config.NODE_ENV !== "development"
             })
         )
         app.use(hpp()) // safety against HTTP Parameter Pollution attacks
         app.use(helmet()) // secure Express apps by setting HTTP response headers.
         app.use(
             cors({
-                origin: '*',
+                origin: config.CLIENT_URL,
                 credentials: true,
                 optionsSuccessStatus: 200,
                 methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
@@ -51,22 +56,40 @@ export class PulseServer{
         app.use(urlencoded({extended: true, limit: '50mb'}))
     }
 
-    private routeMiddleware(app: Application): void {}
+    private routeMiddleware(app: Application): void {
+        applicationRoutes(app);
+    }
 
     private globalErrorHandler(app: Application): void {}
-    private startServer(app: Application): void {
-        try{
+    private async startServer(app: Application): Promise<void> {
+        try {
             const httpServer: http.Server = new http.Server(app);
+            const socketIO: Server = await this.createSocketIO(httpServer);
             this.startHttpServer(httpServer);
-        }
-        catch (e) {
+            this.socketIOConnections(socketIO);
+        } catch (e) {
             console.log(e)
         }
     }
-    private createSocketIO(httpServer: http.Server): void {}
+    private async createSocketIO(httpServer: http.Server): Promise<Server> {
+        const io: Server = new Server(httpServer, {
+            cors: {
+                origin: config.CLIENT_URL,
+                methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+            }
+        })
+        const pubClient = createClient({url: config.REDIS_HOST});
+        const subClient = pubClient.duplicate();
+
+        await Promise.all([pubClient.connect(), subClient.connect()]);
+        io.adapter(createAdapter(pubClient, subClient));
+        return io;
+    }
     private startHttpServer(httpServer: http.Server): void {
         httpServer.listen(SERVER_PORT, () => {
             console.log(`SERVER RUNNING ON PORT ${SERVER_PORT}`)
         })
     }
+
+    private socketIOConnections(io: Server) : void {}
 }
