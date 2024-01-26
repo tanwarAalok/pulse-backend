@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import * as process from "process";
-import {config} from './config';
+import {config} from '@root/config';
 import Logger from 'bunyan';
 
 const log: Logger = config.createLogger('setupDB');

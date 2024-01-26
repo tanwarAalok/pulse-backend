@@ -7,11 +7,11 @@ import compression from "compression"
 import cookieSession from "cookie-session";
 import HTTP_STATUS from "http-status-codes";
 import "express-async-errors";
-import {config} from './config';
+import {config} from '@root/config';
 import {Server} from "socket.io"
 import {createClient} from "redis";
 import {createAdapter} from "@socket.io/redis-adapter";
-import applicationRoutes from './routes';
+import applicationRoutes from '@root/routes';
 import {CustomError, IErrorResponse} from "@global/helpers/error-handler";
 import Logger from 'bunyan';
 
@@ -106,5 +106,7 @@ export class PulseServer{
         })
     }
 
-    private socketIOConnections(io: Server) : void {}
+    private socketIOConnections(io: Server) : void {
+        log.info('SocketioConnections')
+    }
 }
