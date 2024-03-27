@@ -14,6 +14,8 @@ import {UserCache} from "@service/redis/user.cache";
 import {config} from "@root/config";
 import {omit} from "lodash";
 import {authQueue} from "@service/queues/auth.queue";
+import {userQueue} from "@service/queues/user.queue";
+import JWT from 'jsonwebtoken'
 
 
 const userCache: UserCache = new UserCache();
@@ -41,7 +43,7 @@ export class Signup{
         const result: UploadApiResponse = await uploads(avatarImage, `${userObjectId}`, true, true) as UploadApiResponse;
         if(!result?.public_id) throw new BadRequestError('Error occurred while file uploading, Try again!');
 
-        // Add to redis cache
+        // // Add to redis cache
         const userDataForCache: IUserDocument = Signup.prototype.userData(authData, userObjectId);
         userDataForCache.profilePicture = `https://res.cloudinary.com/${config.CLOUDINARY_NAME}/image/upload/v${result.version}/${userObjectId}`;
         await userCache.saveUserToCache(`${userObjectId}`, uId, userDataForCache);
@@ -49,10 +51,26 @@ export class Signup{
         // Add to database
         omit(userDataForCache, ['uId', 'username', 'email', 'avatarColor', 'password'])
         authQueue.addAuthUserJob('addAuthUserToDB', {value: userDataForCache})
+        userQueue.addUserJob('addUserToDB', {value: userDataForCache})
 
-        res.status(HTTP_STATUS.CREATED).json({message: 'User created', authData})
+        const userJWT: string = Signup.prototype.signToken(authData, userObjectId);
+        req.session = {jwt: userJWT}
+
+        res.status(HTTP_STATUS.CREATED).json({message: 'User created', user: userDataForCache, token: userJWT})
     }
 
+    private signToken(data: IAuthDocument, userObjectId: ObjectId) : string{
+        return JWT.sign(
+            {
+                userId: userObjectId,
+                uId: data.uId,
+                email: data.email,
+                username: data.username,
+                avatarColor: data.avatarColor
+            },
+            config.JWT_TOKEN!
+        )
+    }
     private signupData(data: ISignUpData): IAuthDocument{
         const {_id, username, email, uId, password, avatarColor} = data;
         return {
