@@ -43,19 +43,19 @@ export class Signup{
         const result: UploadApiResponse = await uploads(avatarImage, `${userObjectId}`, true, true) as UploadApiResponse;
         if(!result?.public_id) throw new BadRequestError('Error occurred while file uploading, Try again!');
 
-        // // Add to redis cache
+        //  Add to redis cache
         const userDataForCache: IUserDocument = Signup.prototype.userData(authData, userObjectId);
         userDataForCache.profilePicture = `https://res.cloudinary.com/${config.CLOUDINARY_NAME}/image/upload/v${result.version}/${userObjectId}`;
         await userCache.saveUserToCache(`${userObjectId}`, uId, userDataForCache);
 
         // Add to database
         omit(userDataForCache, ['uId', 'username', 'email', 'avatarColor', 'password'])
-        authQueue.addAuthUserJob('addAuthUserToDB', {value: userDataForCache})
+        authQueue.addAuthUserJob('addAuthUserToDB', {value: authData})
         userQueue.addUserJob('addUserToDB', {value: userDataForCache})
 
         const userJWT: string = Signup.prototype.signToken(authData, userObjectId);
-        req.session = {jwt: userJWT}
 
+        req.session = {jwt: userJWT}
         res.status(HTTP_STATUS.CREATED).json({message: 'User created', user: userDataForCache, token: userJWT})
     }
 

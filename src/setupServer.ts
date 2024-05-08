@@ -17,6 +17,8 @@ import Logger from 'bunyan';
 
 const SERVER_PORT = 8000;
 const log: Logger = config.createLogger('setupServer');
+
+
 export class PulseServer{
     private app: Application;
 
