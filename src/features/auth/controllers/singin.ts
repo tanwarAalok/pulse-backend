@@ -6,7 +6,7 @@ import {joiValidation} from "@global/decorators/joi-validation.decorator";
 import {authService} from "@service/db/auth.service";
 import {BadRequestError} from "@global/helpers/error-handler";
 import {loginSchema} from "@auth/schemes/signin";
-import {IUserDocument} from "@user/interfaces/user.interface";
+import { IUserDocument} from "@user/interfaces/user.interface";
 import {userService} from "@service/db/user.service";
 
 export class SignIn {
@@ -44,6 +44,7 @@ export class SignIn {
             uId: existingUser!.uId,
             createdAt: existingUser!.createdAt,
         } as IUserDocument;
+
 
         req.session = {jwt: userJWT};
         res.status(HTTP_STATUS.OK).json({message: 'User login successfully', user: userDocument, token: userJWT})
