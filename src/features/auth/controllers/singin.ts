@@ -15,10 +15,10 @@ export class SignIn {
         const {username, password} = req.body;
 
         const existingUser = await authService.getAuthUserByUsername(username);
-        if(!existingUser) throw new BadRequestError('Invalid credentials !');
+        if(!existingUser) throw new BadRequestError('Invalid credentials');
 
         const passwordMatch: boolean = await existingUser.comparePassword(password);
-        if(!passwordMatch) throw new BadRequestError('Invalid credentials !');
+        if(!passwordMatch) throw new BadRequestError('Invalid credentials');
 
         const user: IUserDocument = await userService.getUserByAuthId(`${existingUser._id}`);
         if(!user) throw new BadRequestError('Invalid credentials, user not found !');
