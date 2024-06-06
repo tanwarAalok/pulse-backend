@@ -6,10 +6,12 @@ import Queue, {Job} from 'bull'
 import {createBullBoard} from '@bull-board/api'
 import {IAuthJob} from "@auth/interfaces/auth.interface";
 import {IEmailJob} from "@user/interfaces/user.interface";
+import {IPostJobData} from "@post/interfaces/post.interface";
 
 type IBaseJobData =
     | IAuthJob
     | IEmailJob
+    | IPostJobData
 
 let bullAdapters: BullAdapter[] = []
 

@@ -14,6 +14,7 @@ import {createAdapter} from "@socket.io/redis-adapter";
 import applicationRoutes from '@root/routes';
 import {CustomError, IErrorResponse} from "@global/helpers/error-handler";
 import Logger from 'bunyan';
+import {SocketIOPostHandler} from "@socket/post.socket";
 
 const SERVER_PORT = 8000;
 const log: Logger = config.createLogger('setupServer');
@@ -78,6 +79,7 @@ export class PulseServer{
             next();
         })
     }
+
     private async startServer(app: Application): Promise<void> {
         try {
             const httpServer: http.Server = new http.Server(app);
@@ -88,6 +90,7 @@ export class PulseServer{
             log.error(error)
         }
     }
+
     private async createSocketIO(httpServer: http.Server): Promise<Server> {
         const io: Server = new Server(httpServer, {
             cors: {
@@ -102,6 +105,7 @@ export class PulseServer{
         io.adapter(createAdapter(pubClient, subClient));
         return io;
     }
+
     private startHttpServer(httpServer: http.Server): void {
         httpServer.listen(SERVER_PORT, () => {
             log.info(`SERVER RUNNING ON PORT ${SERVER_PORT}`)
@@ -109,6 +113,7 @@ export class PulseServer{
     }
 
     private socketIOConnections(io: Server) : void {
-        log.info('SocketioConnections')
+        const postSocketHandler: SocketIOPostHandler = new SocketIOPostHandler(io);
+        postSocketHandler.listen();
     }
 }
