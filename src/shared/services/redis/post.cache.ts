@@ -170,7 +170,6 @@ export class PostCache extends BaseCache{
                     post.createdAt = new Date(Helpers.parseJson(`${post.createdAt}`));
                     postReplies.push(post);
                 }
-
             }
 
             return postReplies;
@@ -186,6 +185,73 @@ export class PostCache extends BaseCache{
                 await this.client.connect();
             }
             return await this.client.ZCOUNT('post', uId, uId);
+        } catch (error) {
+            log.error(error);
+            throw new ServerError('Server error. Try again');
+        }
+    }
+
+    public async deletePostFromCache(key: string, currentUserId: string): Promise<void> {
+        try{
+            if(!this.client.isOpen){
+                await this.client.connect();
+            }
+            const postCount: string[] = await this.client.HMGET(`user:${currentUserId}`, 'postsCount');
+            const multi: ReturnType<typeof this.client.multi> = this.client.multi();
+            multi.ZREM('post', `${key}`);
+            multi.DEL(`post:${key}`);
+            // TODO: Uncomment when comment and reaction are created
+            // multi.DEL(`comment:${key}`);
+            // multi.DEL(`reaction:${key}`);
+            const count: number = parseInt(postCount[0], 10) - 1;
+            multi.HSET(`user:${currentUserId}`, ['postsCount', count]);
+            await multi.exec();
+        } catch (error) {
+            log.error(error);
+            throw new ServerError('Server error. Try again');
+        }
+    }
+
+    public async updatePostInCache(key: string, updatedPost: IPostDocument): Promise<IPostDocument>{
+        const {
+            profilePicture,
+            post,
+            bgColor,
+            feelings,
+            privacy,
+            gifUrl,
+            imgVersion,
+            imgId,
+        } = updatedPost;
+
+        const dataToSave: string[] = [
+            'profilePicture', `${profilePicture}`,
+            'post', `${post}`,
+            'bgColor', `${bgColor}`,
+            'feelings', `${feelings}`,
+            'privacy', `${privacy}`,
+            'gifUrl', `${gifUrl}`,
+            'imgVersion', `${imgVersion}`,
+            'imgId', `${imgId}`,
+
+        ];
+
+        try{
+            if(!this.client.isOpen){
+                await this.client.connect();
+            }
+            await this.client.HSET(`post:${key}`, dataToSave);
+
+            const multi: ReturnType<typeof this.client.multi> = this.client.multi();
+            multi.HGETALL(`post:${key}`);
+
+            const reply: PostCacheMultiType = await multi.exec() as PostCacheMultiType;
+            const postReplies: IPostDocument[] = reply as IPostDocument[];
+
+            postReplies[0].commentsCount = Helpers.parseJson(`${postReplies[0].commentsCount}`);
+            postReplies[0].createdAt = new Date(Helpers.parseJson(`${postReplies[0].createdAt}`));
+            postReplies[0].reactions = Helpers.parseJson(`${postReplies[0].reactions}`);
+            return postReplies[0];
         } catch (error) {
             log.error(error);
             throw new ServerError('Server error. Try again');
