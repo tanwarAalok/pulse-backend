@@ -1,7 +1,7 @@
 import {joiValidation} from "@global/decorators/joi-validation.decorator";
-import {addReactionSchema, removeReactionSchema} from "@reaction/schemes/reactions";
+import { removeReactionSchema } from "@reaction/schemes/reactions";
 import {Request, Response} from "express";
-import {IReactionDocument, IReactionJob} from "@reaction/interfaces/reaction.interface";
+import { IReactionJob} from "@reaction/interfaces/reaction.interface";
 import {ReactionCache} from "@service/redis/reaction.cache";
 import HTTP_STATUS from "http-status-codes";
 import {reactionQueue} from "@service/queues/reaction.queue";
@@ -23,6 +23,6 @@ export class DeleteReactionController{
 
         reactionQueue.addReactionJob('removePostReactionFromDB', dbReactionData);
 
-        res.status(HTTP_STATUS.OK).json({message: 'Reaction remove from post'});
+        res.status(HTTP_STATUS.OK).json({message: 'Reaction removed from post'});
     }
 }

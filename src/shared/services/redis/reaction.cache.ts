@@ -67,6 +67,45 @@ export class ReactionCache extends BaseCache{
         }
     }
 
+    public async getReactionsFromCache(postId: string): Promise<[IReactionDocument[], number]>{
+        try{
+            if(!this.client.isOpen){
+                await this.client.connect();
+            }
+            const reactionCount: number = await this.client.LLEN(`reaction:${postId}`);
+            const response: string[] = await this.client.LRANGE(`reaction:${postId}`, 0, -1);
+            const list: IReactionDocument[] =  [];
+            for(const item of response){
+                list.push(Helpers.parseJson(item));
+            }
+            return response.length ? [list, reactionCount] : [[], 0];
+        } catch (error){
+            log.error(error);
+            throw new ServerError('Server error. Try again');
+        }
+    }
+
+    public async getSingleReactionByUsernameFromCache(postId: string, username: string): Promise<[IReactionDocument, number] | []>{
+        try{
+            if(!this.client.isOpen){
+                await this.client.connect();
+            }
+            const response: string[] = await this.client.LRANGE(`reaction:${postId}`, 0, -1);
+            const list: IReactionDocument[] =  [];
+            for(const item of response){
+                list.push(Helpers.parseJson(item));
+            }
+            const result: IReactionDocument = find(list, (listItem: IReactionDocument) => {
+                return listItem.postId === postId && listItem.username === username;
+            }) as IReactionDocument;
+
+            return result ? [result, 1] : [];
+        } catch (error){
+            log.error(error);
+            throw new ServerError('Server error. Try again');
+        }
+    }
+
     private getPreviousReaction(reactions: string[], username: string): IReactionDocument | undefined {
         const list: IReactionDocument[] = [];
         for(const item of reactions){
@@ -76,4 +115,5 @@ export class ReactionCache extends BaseCache{
             return listItem.username === username;
         })
     }
+
 }
