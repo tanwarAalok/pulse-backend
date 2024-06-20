@@ -16,7 +16,8 @@ import {CustomError, IErrorResponse} from "@global/helpers/error-handler";
 import Logger from 'bunyan';
 import {SocketIOPostHandler} from "@socket/post.socket";
 import {SocketIOFollowerHandler} from "@socket/follower.socket";
-import {SocketIOUserHandler} from "@socket/user";
+import {SocketIOUserHandler} from "@socket/user.socket";
+import {SocketIONotificationHandler} from "@socket/notification.socket";
 
 const SERVER_PORT = 8000;
 const log: Logger = config.createLogger('setupServer');
@@ -118,9 +119,11 @@ export class PulseServer{
         const postSocketHandler: SocketIOPostHandler = new SocketIOPostHandler(io);
         const followerSocketHandler: SocketIOFollowerHandler = new SocketIOFollowerHandler(io);
         const userSocketHandler: SocketIOUserHandler = new SocketIOUserHandler(io);
+        const notificationSocketHandler: SocketIONotificationHandler = new SocketIONotificationHandler();
 
         postSocketHandler.listen();
         followerSocketHandler.listen();
         userSocketHandler.listen();
+        notificationSocketHandler.listen(io);
     }
 }
