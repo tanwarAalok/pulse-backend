@@ -19,6 +19,7 @@ import {SocketIOFollowerHandler} from "@socket/follower.socket";
 import {SocketIOUserHandler} from "@socket/user.socket";
 import {SocketIONotificationHandler} from "@socket/notification.socket";
 import {SocketIOImageHandler} from "@socket/image.socket";
+import {SocketIOChatHandler} from "@socket/chat.socket";
 
 const SERVER_PORT = 8000;
 const log: Logger = config.createLogger('setupServer');
@@ -122,11 +123,13 @@ export class PulseServer{
         const userSocketHandler: SocketIOUserHandler = new SocketIOUserHandler(io);
         const notificationSocketHandler: SocketIONotificationHandler = new SocketIONotificationHandler();
         const imageSocketHandler: SocketIOImageHandler = new SocketIOImageHandler();
+        const chatSocketHandler: SocketIOChatHandler = new SocketIOChatHandler(io);
 
         postSocketHandler.listen();
         followerSocketHandler.listen();
         userSocketHandler.listen();
         notificationSocketHandler.listen(io);
         imageSocketHandler.listen(io);
+        chatSocketHandler.listen();
     }
 }
