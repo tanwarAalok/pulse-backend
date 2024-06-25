@@ -16,14 +16,17 @@ class PostRoutes{
 
         this.router.get('/post/all/:page', authMiddleware.checkAuthentication, GetPostController.prototype.posts);
         this.router.get('/post/image/:page', authMiddleware.checkAuthentication, GetPostController.prototype.postsWithImage);
+        this.router.get('/post/video/:page', authMiddleware.checkAuthentication, GetPostController.prototype.postsWithVideos);
 
         this.router.post('/post', authMiddleware.checkAuthentication, CreatePostController.prototype.createPost);
         this.router.post('/post/image', authMiddleware.checkAuthentication, CreatePostController.prototype.createPostWithImage);
+        this.router.post('/post/video', authMiddleware.checkAuthentication, CreatePostController.prototype.postWithVideo);
 
         this.router.delete('/post/:postId', authMiddleware.checkAuthentication, DeletePostController.prototype.deletePost);
 
         this.router.put('/post/:postId', authMiddleware.checkAuthentication, UpdatePostController.prototype.updatePost);
         this.router.put('/post/image/:postId', authMiddleware.checkAuthentication, UpdatePostController.prototype.updatePostWithImage);
+        this.router.put('/post/video/:postId', authMiddleware.checkAuthentication, UpdatePostController.prototype.postWithVideo);
 
         return this.router;
     }

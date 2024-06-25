@@ -15,7 +15,11 @@ class PostService {
         let postQuery = {};
         if(query?.imgId && query?.gifUrl){
             postQuery = { $or: [{ imgId: { $ne: '' } }, { gifUrl: { $ne: '' } } ]} // give me posts where imgId or gitUrl are not empty strings
-        } else {
+        }
+        else if(query?.videoId){
+            postQuery = { $or: [{ videoId: { $ne: '' } }]}
+        }
+        else {
             postQuery = query;
         }
 

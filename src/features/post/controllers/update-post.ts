@@ -3,12 +3,13 @@ import {Request, Response} from "express";
 import HTTP_STATUS from "http-status-codes";
 import {socketIOPostObject} from "@socket/post.socket";
 import {postQueue} from "@service/queues/post.queue";
-import {postSchema, postWithImageSchema} from "@post/schemes/post.schemes";
+import {postSchema, postWithImageSchema, postWithVideoSchema} from "@post/schemes/post.schemes";
 import {joiValidation} from "@global/decorators/joi-validation.decorator";
 import {IPostDocument} from "@post/interfaces/post.interface";
 import {UploadApiResponse} from "cloudinary";
-import {uploads} from "@global/helpers/cloudinary-upload";
+import {uploads, videoUpload} from "@global/helpers/cloudinary-upload";
 import {BadRequestError} from "@global/helpers/error-handler";
+import {imageQueue} from "@service/queues/image.queue";
 
 
 const postCache: PostCache = new PostCache();
@@ -28,11 +29,25 @@ export class UpdatePostController {
             await UpdatePostController.prototype.updateHelper(req);
         }
         else {
-            const result: UploadApiResponse = await UpdatePostController.prototype.addImageToExistingPost(req);
+            const result: UploadApiResponse = await UpdatePostController.prototype.addFileToExistingPost(req);
             if(!result?.public_id) throw new BadRequestError(result.message);
         }
 
         res.status(HTTP_STATUS.OK).json({message: 'Post with image updated successfully'});
+    }
+
+    @joiValidation(postWithVideoSchema)
+    public async postWithVideo(req: Request, res: Response): Promise<void> {
+        const { videoId, videoVersion } = req.body;
+        if (videoId && videoVersion) {
+            UpdatePostController.prototype.updateHelper(req);
+        } else {
+            const result: UploadApiResponse = await UpdatePostController.prototype.addFileToExistingPost(req);
+            if (!result.public_id) {
+                throw new BadRequestError(result.message);
+            }
+        }
+        res.status(HTTP_STATUS.OK).json({ message: 'Post with video updated successfully' });
     }
 
     private async updateHelper(req: Request) {
@@ -45,6 +60,8 @@ export class UpdatePostController {
             gifUrl,
             imgVersion,
             imgId,
+            videoVersion,
+            videoId
         } = req.body;
         const updatedPost: IPostDocument = {
             profilePicture,
@@ -53,8 +70,10 @@ export class UpdatePostController {
             feelings,
             privacy,
             gifUrl,
-            imgVersion,
-            imgId,
+            imgId: imgId ? imgId : '',
+            imgVersion: imgVersion ? imgVersion : '',
+            videoId: videoId ? videoId : '',
+            videoVersion: videoVersion ? videoVersion : ''
         } as IPostDocument;
 
         const postUpdated = await postCache.updatePostInCache(req.params.postId, updatedPost);
@@ -62,7 +81,7 @@ export class UpdatePostController {
         postQueue.addPostJob('updatePostInDB', {key: req.params.postId, value: postUpdated});
     }
 
-    private async addImageToExistingPost(req: Request) {
+    private async addFileToExistingPost(req: Request) {
         const {
             profilePicture,
             post,
@@ -70,10 +89,14 @@ export class UpdatePostController {
             feelings,
             privacy,
             gifUrl,
-            image
+            image,
+            video
         } = req.body;
 
-        const result: UploadApiResponse = await uploads(image) as UploadApiResponse;
+        const result: UploadApiResponse = image
+            ? ((await uploads(image)) as UploadApiResponse)
+            : ((await videoUpload(video)) as UploadApiResponse);
+
         if(!result?.public_id) return result;
 
         const updatedPost: IPostDocument = {
@@ -85,12 +108,22 @@ export class UpdatePostController {
             gifUrl,
             imgVersion: result.version.toString(),
             imgId: result.public_id,
+            videoId: video ? result.public_id : '',
+            videoVersion: video ? result.version.toString() : ''
         } as IPostDocument;
 
         const postUpdated = await postCache.updatePostInCache(req.params.postId, updatedPost);
         socketIOPostObject.emit('update post', postUpdated, 'posts');
         postQueue.addPostJob('updatePostInDB', {key: req.params.postId, value: postUpdated});
-        //TODO: call image queue to add image to mongodb db
+
+        if (image) {
+            imageQueue.addImageJob('addImageToDB', {
+                key: `${req.currentUser!.userId}`,
+                imgId: result.public_id,
+                imgVersion: result.version.toString()
+            });
+        }
+
         return result;
     }
 }
