@@ -1,6 +1,17 @@
 # Pulse Backend
 
-This is the backend for Pulse, a social media application with features for posts, real-time chat, notifications, and more.
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white) ![Node.js](https://img.shields.io/badge/Node.js-339933?logo=node.js&logoColor=white) ![Express](https://img.shields.io/badge/Express-000000?logo=express&logoColor=white) ![MongoDB](https://img.shields.io/badge/MongoDB-47A248?logo=mongodb&logoColor=white) ![Redis](https://img.shields.io/badge/Redis-DC382D?logo=redis&logoColor=white) ![Socket.IO](https://img.shields.io/badge/Socket.IO-010101?logo=socketdotio&logoColor=white)
+
+The backend for **Pulse**, a social media platform with posts, reactions, comments, follows, one-to-one real-time chat and live notifications. The React client lives in [pulse-app](https://github.com/tanwarAalok/pulse-app).
+
+## Architecture
+
+- **Feature modules** (`src/features/`): auth, user, post, reactions, comments, followers, chat, notifications and images, each with its own routes, controllers, schemas and interfaces.
+- **Redis cache first:** hot data (users, posts, reactions, comments, followers, chats) is written to and read from Redis, so reads stay fast.
+- **Bull job queues** (`src/shared/workers/`): writes to MongoDB, emails and image processing run as background jobs, which keeps request latency low. A Bull Board dashboard is served at `/queues`.
+- **Socket.IO with the Redis adapter** (`src/shared/sockets/`): pushes posts, reactions, follows, notifications and chat messages to clients in real time, and scales across several server instances.
+- **Media** is uploaded to Cloudinary; **email** goes out through SendGrid in production and Nodemailer in development.
+- Request validation with Joi decorators, structured logging with Bunyan, and tests with Jest.
 
 ## Features
 
@@ -47,11 +58,34 @@ This is the backend for Pulse, a social media application with features for post
     ```
 
 3.  **Set up environment variables:**
-    Create a `.env` file in the root directory and add the following environment variables. You can use the provided `.env.example` as a template.
+    Create a `.env` file in the root directory. The server refuses to start if any of these are missing:
 
-4.  **Start the development server:**
+    ```env
+    DB_URL=mongodb://localhost:27017/pulse
+    REDIS_HOST=redis://localhost:6379
+    CLIENT_URL=http://localhost:3000
+    NODE_ENV=development
+    JWT_TOKEN=change-me
+    SECRET_KEY_ONE=change-me
+    SECRET_KEY_TWO=change-me
+    CLOUDINARY_NAME=
+    CLOUDINARY_API_KEY=
+    CLOUDINARY_API_SECRET=
+    SENDER_EMAIL=
+    SENDER_EMAIL_PASSWORD=
+    SENDGRID_API_KEY=
+    SENDGRID_SENDER=
+    EC2_URL=
+    ```
+
+4.  **Start the development server** (runs on port 8000):
     ```bash
     npm run dev
+    ```
+
+5.  **Optionally seed sample users:**
+    ```bash
+    npm run seed:dev
     ```
 
 ## API Endpoints
@@ -127,3 +161,4 @@ To run the tests, use the following command:
 
 ```bash
 npm test
+```
